@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+.git/
+.gitignore
+README.md
+train.py
+main.py
+.DS_Store
+venv/
+env/
+.env
+# Note: models/ directory should be included in Docker image

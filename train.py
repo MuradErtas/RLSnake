@@ -61,9 +61,9 @@ class Trainer:
                 
                 state = next_state
                 
-                # Train agent multiple times per episode (more frequent learning)
-                if len(self.agent.memory) > 32 and steps % 4 == 0:
-                    self.agent.replay(batch_size=32)
+                # Train agent more frequently with larger batches
+                if len(self.agent.memory) > 64 and steps % 2 == 0:
+                    self.agent.replay(batch_size=64)
                 
                 # Render if needed
                 if should_render:
@@ -71,9 +71,10 @@ class Trainer:
                     pygame.display.flip()
                     self.clock.tick(10)  # Slow down for visibility
             
-            # Final training step for episode
-            if len(self.agent.memory) > 32:
-                self.agent.replay(batch_size=32)
+            # Multiple training steps at episode end for better learning
+            if len(self.agent.memory) > 64:
+                for _ in range(3):  # Train 3 times at end of episode
+                    self.agent.replay(batch_size=64)
             
             # Track metrics
             score = self.game.score
@@ -87,10 +88,10 @@ class Trainer:
                       f"Avg Score: {avg_score:5.2f} | "
                       f"Epsilon: {self.agent.epsilon:.3f} | Steps: {steps}")
             
-            # Save model periodically
-            #if episode > 0 and episode % self.save_every == 0:
-            #    self.agent.save(f"models/model_episode_{episode}.npz")
-            #    print(f"Model saved at episode {episode}")
+            # Save model periodically (every 50 episodes)
+            if episode > 0 and episode % 50 == 0:
+                self.agent.save(f"models/model_episode_{episode}.npz")
+                print(f"Model saved at episode {episode}")
         
         # Final save
         self.agent.save("models/model_final.npz")
@@ -128,7 +129,7 @@ class Trainer:
         plt.show()
 
 if __name__ == "__main__":
-    trainer = Trainer(episodes=1000, render=False, render_every=50)
+    trainer = Trainer(episodes=3000, render=False, render_every=100)
     trainer.train()
     trainer.plot_scores()
 

@@ -1,7 +1,14 @@
 import numpy as np
-import pygame
 from enum import Enum
 from typing import Tuple, List, Optional
+
+# Optional pygame import for rendering (not needed in headless/server mode)
+try:
+    import pygame
+    PYGAME_AVAILABLE = True
+except ImportError:
+    PYGAME_AVAILABLE = False
+    pygame = None
 
 class Direction(Enum):
     UP = (0, -1)
@@ -215,8 +222,12 @@ class SnakeGame:
         
         return self.get_state(), reward, self.done
     
-    def render(self, screen: Optional[pygame.Surface] = None) -> Optional[np.ndarray]:
+    def render(self, screen: Optional['pygame.Surface'] = None) -> Optional[np.ndarray]:
         """Render game. If screen provided, draw to it. Otherwise return array"""
+        if not PYGAME_AVAILABLE:
+            # Return None if pygame not available (headless mode)
+            return None
+            
         if screen is None:
             # Return state array for headless mode
             return None

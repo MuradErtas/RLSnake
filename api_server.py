@@ -152,11 +152,11 @@ async def start_game(request: StartRequest):
 def _initialize_game(session_id: str, model_level: str):
     """Initialize a new game (runs in thread pool)."""
     game = SnakeGame(width=20, height=20, cell_size=20)
-    state = game.reset()
+    state = game.reset()  # Returns numpy array
     games[session_id] = {
         'game': game,
         'model_level': model_level,
-        'state': state
+        'state': state  # Store as numpy array internally
     }
     
     return {
@@ -183,6 +183,11 @@ async def step_game(request: StepRequest):
     model_level = game_data['model_level']
     agent = agents[model_level]
     
+    # Convert stored state back to numpy array if it's a list
+    stored_state = game_data['state']
+    if isinstance(stored_state, list):
+        stored_state = np.array(stored_state, dtype=np.float32)
+    
     # Run game step in thread pool
     loop = asyncio.get_event_loop()
     game_state = await loop.run_in_executor(
@@ -190,11 +195,11 @@ async def step_game(request: StepRequest):
         _step_game,
         game,
         agent,
-        game_data['state']
+        stored_state
     )
     
-    # Update stored state
-    game_data['state'] = game_state['state']
+    # Update stored state (keep as numpy array internally, convert to list only for JSON)
+    game_data['state'] = np.array(game_state['state'], dtype=np.float32) if isinstance(game_state['state'], list) else game_state['state']
     
     # Remove game if it's over
     if game_state['game_over']:
@@ -202,8 +207,12 @@ async def step_game(request: StepRequest):
     
     return game_state
 
-def _step_game(game: SnakeGame, agent: DQNAgent, current_state: np.ndarray):
+def _step_game(game: SnakeGame, agent: DQNAgent, current_state):
     """Execute one game step (runs in thread pool)."""
+    # Convert list back to numpy array if needed (state is stored as list for JSON)
+    if isinstance(current_state, list):
+        current_state = np.array(current_state, dtype=np.float32)
+    
     if game.done:
         return {
             "snake": game.snake,
@@ -212,7 +221,7 @@ def _step_game(game: SnakeGame, agent: DQNAgent, current_state: np.ndarray):
             "moves": game.steps,
             "game_over": True,
             "direction": game.direction.name,
-            "state": current_state
+            "state": current_state.tolist() if isinstance(current_state, np.ndarray) else current_state
         }
     
     # Agent chooses action
@@ -253,7 +262,8 @@ async def reset_game(request: StepRequest):
         game
     )
     
-    game_data['state'] = game_state['state']
+    # Store state as numpy array (convert from list)
+    game_data['state'] = np.array(game_state['state'], dtype=np.float32)
     
     return game_state
 
